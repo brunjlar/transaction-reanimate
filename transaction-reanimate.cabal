@@ -1,0 +1,16 @@
+Cabal-Version:       >=1.10
+Name:                transaction-reanimate
+Version:             0.1.0.0
+Author:              Lars Bruenjes
+Maintainer:          brunjlar@gmail.com
+Build-Type:          Simple
+Copyright:           © 2021 Lars Bruenjes
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Transaction
+  build-depends:       base >=4.14 && <4.15
+                     , reanimate ==1.1.4.0
+                     , reanimate-svg
+  default-language:    Haskell2010
+  ghc-options:         -Wall
