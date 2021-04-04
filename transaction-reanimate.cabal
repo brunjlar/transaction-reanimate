@@ -10,6 +10,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     Transaction
   build-depends:       base >=4.14 && <4.15
+                     , linear
                      , reanimate ==1.1.4.0
                      , reanimate-svg
   default-language:    Haskell2010
