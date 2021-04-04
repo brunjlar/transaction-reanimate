@@ -6,13 +6,16 @@ import Data.Text        (Text)
 import Graphics.SvgTree hiding (Text)
 import Linear.V2
 import Reanimate
-import Reanimate.Raster
 
 test :: IO ()
-test = reanimate $ animate $ \t -> mkGroup
-    [ mkBackground "white"
-    , frameAt t $ output "Alice" "100 ₳" "Datum" (-3, 2) (1, -1)
-    ]
+test = reanimate scenario
+
+scenario :: Animation
+scenario =
+    staticFrame 0 (mkBackground "white") `andThen`
+    ( output "Alice" "100 ₳" "Datum" (-9, 1) (-6, 3) `parA`
+      output "Bob"   "100 ₳" "Datum" (-9, 0) (-5, -3)
+    )
 
 outputPort :: Tree
 outputPort = withStrokeWidth 0.03
@@ -28,8 +31,8 @@ text = scale 0.1
 
 output :: Text -> Text -> Text -> (Double, Double) -> (Double, Double) -> Animation
 output addr amt dat (x1, y1) (x2, y2) =
-    setDuration 0.4  a                       `andThen`
-    setDuration 0.15 b                       `andThen`
+    setDuration 0.4  a                      `andThen`
+    setDuration 0.15 b                      `andThen`
     t (translate (-0.5)   0.1  $ text addr) `andThen`
     t (translate (-0.5) (-0.2) $ text amt)  `andThen`
     t (translate (-0.5) (-0.4) $ text dat)
