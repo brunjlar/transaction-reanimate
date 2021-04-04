@@ -12,12 +12,21 @@ test = reanimate scenario
 
 scenario :: Animation
 scenario =
-    staticFrame 0 (mkBackground "white") `andThen`
-    ( output "Alice" "100 ₳" "Datum" (-9, 1) (-6, 3) `parA`
-      output "Bob"   "100 ₳" "Datum" (-9, 0) (-5, -3)
-    ) `andThen`
-    tx 1 (-3, 1) `andThen`
-    input "redeemer" (-3, 1) (-6, 3) `andThen`
+    staticFrame 0 (mkBackground "white")                `andThen`
+    ( output "Alice" "100 ₳" "" (-9, 1) (-6, 3) `parA`
+      output "Bob"    "50 ₳" "" (-9, 0) (-4, -4)
+    )                                                   `andThen`
+    tx 1 (-3, 1)                                        `andThen`
+    input "" (-3, 1) (-6, 3)                            `andThen`
+    output "Bob"   "10 ₳" "" (-3, 0.5) (0, -2)          `andThen`
+    output "Alice" "90 ₳" "" (-3, 1.5) (-0.5, 2)        `andThen`
+    tx 2 (2, -2)                                        `andThen`
+    input "" (2, -1.5) (-0.5, 2)                        `andThen`
+    input "" (2, -2) (0, -2)                            `andThen`
+    input "" (2, -2.5) (-4, -4)                         `andThen`
+    output "Alice"    "35 ₳" "" (2, -1.5) (6, 3.5)      `andThen`
+    output "Bob"       "5 ₳" "" (2, -2)   (7, 1.5)      `andThen`
+    output "Charlie" "110 ₳" "" (2, -2.5) (6.5, -4)     `andThen`
     pause 1
 
 outputPort :: Tree
