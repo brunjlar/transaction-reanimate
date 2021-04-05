@@ -1,14 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Transaction where
+module Transaction
+    ( transactions
+    ) where
 
 import Data.Text        (Text, pack)
 import Graphics.SvgTree hiding (Text)
 import Linear.V2
 import Reanimate
 
-test :: IO ()
-test = reanimate $ a0 `andThen` (a1 `seqA` a2 `seqA` a3 `seqA` a4 `seqA` a5 `seqA` a6)
+transactions :: IO ()
+transactions = reanimate $ a0 `andThen` (a1 `seqA` a2 `seqA` a3 `seqA` a4 `seqA` a5 `seqA` a6)
 
 scenario :: Text -> Text -> Animation
 scenario x y =

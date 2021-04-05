@@ -2,3 +2,5 @@ cradle:
   cabal:
     - path: "./src"
       component: "lib:transaction-reanimate"
+    - path: "app/transactions.hs"
+      component: "exe:transactions"

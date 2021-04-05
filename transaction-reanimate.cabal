@@ -16,3 +16,11 @@ library
                      , text
   default-language:    Haskell2010
   ghc-options:         -Wall
+
+executable transactions
+  hs-source-dirs:      app
+  main-is:             transactions.hs
+  build-depends:       base >= 4.14 && <4.15
+                     , transaction-reanimate
+  ghc-options:         -Wall -O2
+  default-language:    Haskell2010
