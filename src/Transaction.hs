@@ -31,7 +31,11 @@ scenario x y =
     pause 1
 
 a0, a1, a2, a3, a4, a5, a6 :: Animation
-a0 = staticFrame 0 $ mkBackground "white"
+a0 = staticFrame 0 $ mkGroup
+        [ mkImage 16 9 "Cardano.jpg" -- mkBackground "white"
+        , withFillOpacity 0.8 $ mkBackground "white"
+        ]
+
 a1 = scenario "Alice" ""
 
 a2 = animate (\t -> scale (1 + 2.1 * t * t) $ translate (6 * t) (-3 * t) svg) `andThen` pause 1
