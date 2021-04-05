@@ -8,13 +8,12 @@ import Linear.V2
 import Reanimate
 
 test :: IO ()
-test = reanimate scenario
+test = reanimate $ a0 `andThen` (a1 `seqA` a2 `seqA` a3 `seqA` a4 `seqA` a5 `seqA` a6)
 
-scenario :: Animation
-scenario =
-    staticFrame 0 (mkBackground "white")                `andThen`
-    ( output "Alice" "100 ₳" "" (-9, 1) (-6, 3) `parA`
-      output "Bob"    "50 ₳" "" (-9, 0) (-4, -4)
+scenario :: Text -> Text -> Animation
+scenario x y =
+    ( output x       "100 ₳" y  (-10, 1) (-6, 3) `parA`
+      output "Bob"    "50 ₳" "" (-10, 0) (-4, -4)
     )                                                   `andThen`
     tx 1 (-3, 1)                                        `andThen`
     input "" (-3, 1) (-6, 3)                            `andThen`
@@ -28,6 +27,32 @@ scenario =
     output "Bob"       "5 ₳" "" (2, -2)   (7, 1.5)      `andThen`
     output "Charlie" "110 ₳" "" (2, -2.5) (6.5, -4)     `andThen`
     pause 1
+
+a0, a1, a2, a3, a4, a5, a6 :: Animation
+a0 = staticFrame 0 $ mkBackground "white"
+a1 = scenario "Alice" ""
+
+a2 = animate (\t -> scale (1 + 2.1 * t * t) $ translate (6 * t) (-3 * t) svg) `andThen` pause 1
+  where
+    svg = lastFrame a1
+
+a3 = lastFrame a2 `fade`scale 3.1 (translate 6 (-3) $ lastFrame $ scenario "Script" "") `andThen` pause 1
+
+a4 = animate (\t -> scale (3.1 - 2.1 * t) $ translate ((-6) * t) (3 * t) svg) `andThen` pause 1
+  where
+    svg = scale (1 / 3.1) $ lastFrame a3
+
+a5 = animate (\t -> scale (1 + 0.55 * t) $ translate (3.6 * t) (- 0.6 * t) svg) `andThen` pause 1
+  where
+    svg = lastFrame a4
+
+a6 = lastFrame a5 `fade`scale 1.55 (translate 3.6 (-0.6) $ lastFrame $ scenario "Script" "Datum") `andThen` pause 1
+
+lastFrame :: Animation -> Tree
+lastFrame a = frameAt (duration a) a
+
+fade :: Tree -> Tree -> Animation
+fade a b = applyE fadeOutE (staticFrame 1 a) `parA` applyE fadeInE (staticFrame 1 b)
 
 outputPort :: Tree
 outputPort = withStrokeWidth 0.03
