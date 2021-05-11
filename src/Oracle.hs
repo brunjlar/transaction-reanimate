@@ -1,14 +1,28 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Transaction
-    ( transactions
+module Oracle
+    ( oracle
     ) where
 
 import Core
 
-transactions :: IO ()
-transactions = reanimate $ a0 `andThen` (a1 `seqA` a2 `seqA` a3 `seqA` a4 `seqA` a5 `seqA` a6)
+oracle :: IO ()
+oracle = reanimate $ a0 `andThen` a1
 
+scenario1 :: Text -> Animation
+scenario1 x =
+    output "Oracle" x "1.75 USD/ADA" (-10, 10) (-6, 3)
+
+a0, a1 :: Animation
+a0 = staticFrame 0 $ mkGroup
+        [ mkImage 16 9 "Cardano.jpg" -- mkBackground "white"
+        , withFillOpacity 0.8 $ mkBackground "white"
+        ]
+a1 = scenario1 ""
+
+--reanimate $ a0 `andThen` (a1 `seqA` a2 `seqA` a3 `seqA` a4 `seqA` a5 `seqA` a6)
+
+{-
 scenario :: Text -> Text -> Text -> Animation
 scenario x y z =
     ( output x       "100 ada" y  (-10, 1) (-6, 3) `parA`
@@ -50,3 +64,4 @@ a5 = animate (\t -> scale (1 + 0.55 * t) $ translate (3.6 * t) (- 0.6 * t) svg) 
     svg = lastFrame a4
 
 a6 = lastFrame a5 `fade`scale 1.55 (translate 3.6 (-0.6) $ lastFrame $ scenario "Script" "Datum" "Redeemer") `andThen` pause 1
+-}
