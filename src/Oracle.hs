@@ -7,14 +7,15 @@ module Oracle
 import Core
 
 oracle :: IO ()
-oracle = reanimate $ a0 `andThen` (a1 `seqA` a2 `andThen` a3)
+oracle = reanimate $ a0 `andThen` (pause 1 `seqA` a1 `seqA` a2 `andThen` a3)
 
 scenario1 :: Text -> Animation
 scenario1 x =
-    output "Oracle" x  "1.75" (-10,  1) (-6,    0)   `andThen`
-    pause 1                                          `andThen`
-    output "Oracle" "" "1.70" (-10,  5) (-6.5,  3)   `andThen`
-    output "Oracle" "" "1.85" (-10, -4) (-6.5, -2)
+    output "Oracle" x  "1.75" (-10,  1) (-6,    0) `andThen`
+    pause 1                                        `andThen`
+    output "Oracle" "" "1.70" (-10,  5) (-6.5,  3) `andThen`
+    output "Oracle" "" "1.85" (-10, -4) (-6.5, -2) `andThen`
+    pause 1
 
 a0, a1, a2, a3 :: Animation
 
