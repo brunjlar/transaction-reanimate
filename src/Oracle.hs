@@ -19,7 +19,7 @@ scenario1 x =
 a0, a1, a2, a3 :: Animation
 
 a0 = staticFrame 0 $ mkGroup
-        [ mkImage 16 9 "Cardano.jpg" -- mkBackground "white"
+        [ mkImage 16 9 "oracle.png"
         , withFillOpacity 0.8 $ mkBackground "white"
         ]
 
