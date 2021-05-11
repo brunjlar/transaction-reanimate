@@ -44,5 +44,6 @@ a3 =
     pause 1                                                  `andThen`
     tx 2 (4, 1)                                              `andThen`
     input "update" (4, 1) (1, 2.5)                           `andThen`
-    output "Owner" "NFT" "1.77" (4, 1) (7, 0)                `andThen`
+    output "Oracle" "NFT"   "1.77" (4, 1.5) (7,    3)        `andThen`
+    output "Owner"  "1 ada" ""     (4, 0.5) (7.4, -2)        `andThen`
     pause 1
