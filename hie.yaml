@@ -6,3 +6,5 @@ cradle:
       component: "exe:transactions"
     - path: "app/oracle.hs"
       component: "exe:oracle"
+    - path: "app/tokensale.hs"
+      component: "exe:tokensale"

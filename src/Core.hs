@@ -6,6 +6,7 @@ module Core
     , lastFrame
     , fade
     , output
+    , output'
     , input
     , tx
     ) where
@@ -35,7 +36,10 @@ text = scale 0.2
      . latex
 
 output :: Text -> Text -> Text -> (Double, Double) -> (Double, Double) -> Animation
-output addr amt dat (x1, y1) (x2, y2) =
+output = output' 1.35
+
+output' :: Double -> Text -> Text -> Text -> (Double, Double) -> (Double, Double) -> Animation
+output' d addr amt dat (x1, y1) (x2, y2) =
     setDuration 0.4  a                       `andThen`
     setDuration 0.15 b                       `andThen`
     t (translate (-0.5)   0.15  $ text addr) `andThen`
@@ -50,7 +54,7 @@ output addr amt dat (x1, y1) (x2, y2) =
           $ withFillOpacity 0
           $ mkPath
                 [ MoveTo OriginAbsolute [V2 (x1 + 0.35) y1]
-                , CurveTo OriginAbsolute [(V2 (x1 + 1.35) y1, V2 (x2 - 2) y2, V2 (x2 - 1) y2)]
+                , CurveTo OriginAbsolute [(V2 (x1 + d) y1, V2 (x2 - 2) y2, V2 (x2 - 1) y2)]
                 , LineTo OriginAbsolute [V2 (x2 - 0.1) y2]
                 ]
     b = animate $ \s -> translate x2 y2 $ partialSvg s $ pathify outputPort

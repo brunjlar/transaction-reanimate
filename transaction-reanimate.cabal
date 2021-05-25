@@ -10,6 +10,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     Core
                      , Oracle
+                     , TokenSale
                      , Transaction
   build-depends:       base >=4.14 && <4.15
                      , linear
@@ -22,6 +23,14 @@ library
 executable oracle
   hs-source-dirs:      app
   main-is:             oracle.hs
+  build-depends:       base >= 4.14 && <4.15
+                     , transaction-reanimate
+  ghc-options:         -Wall -O2
+  default-language:    Haskell2010
+
+executable tokensale
+  hs-source-dirs:      app
+  main-is:             tokensale.hs
   build-depends:       base >= 4.14 && <4.15
                      , transaction-reanimate
   ghc-options:         -Wall -O2
