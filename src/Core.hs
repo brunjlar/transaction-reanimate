@@ -9,6 +9,7 @@ module Core
     , output'
     , input
     , tx
+    , txWithLabel
     ) where
 
 import Data.Text        (Text, pack)
@@ -63,7 +64,10 @@ output' d addr amt dat (x1, y1) (x2, y2) =
     t = staticFrame 0.15 . translate x2 y2
 
 tx :: Int -> (Double, Double) -> Animation
-tx i (x, y) = setDuration 0.2 a `andThen` staticFrame 0.8 t
+tx i = txWithLabel $ Just $ show i
+
+txWithLabel :: Maybe String -> (Double, Double) -> Animation
+txWithLabel m (x, y) = setDuration 0.2 a `andThen` staticFrame 0.8 t
   where
     a :: Animation
     a = animate $ \s -> partialSvg s $ pathify
@@ -73,7 +77,12 @@ tx i (x, y) = setDuration 0.2 a `andThen` staticFrame 0.8 t
             $ mkRect 0.7 2
 
     t :: Tree
-    t = translate x (y - 0.05) $ text $ pack $ "Tx " ++ show i
+    t = translate x (y - 0.05) $ text $ pack label
+
+    label :: String
+    label = case m of
+        Nothing -> "Tx"
+        Just l  -> "Tx " ++ l
 
 input :: Text -> (Double, Double) -> (Double, Double) -> Animation
 input red (x1, y1) (x2, y2) =
