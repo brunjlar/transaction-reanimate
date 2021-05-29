@@ -4,7 +4,7 @@
 
 {-# OPTIONS_GHC -Wno-unused-top-binds   #-}
 
-module AnimationM
+module Reanimate.EUTxO.AnimationM
     ( MonadError (..)
     , Pos
     , Tx
@@ -36,7 +36,7 @@ import           Reanimate
 import           System.Exit              (ExitCode (..), exitWith)
 import           System.IO                (hPutStrLn, stderr)
 
-import qualified Core                     as C
+import qualified Reanimate.EUTxO.Core     as C
 
 type Pos = (Double, Double)
 type PosMap = IntMap Pos

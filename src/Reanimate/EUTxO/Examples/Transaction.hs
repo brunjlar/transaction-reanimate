@@ -1,10 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Transaction
+module Reanimate.EUTxO.Examples.Transaction
     ( transactions
     ) where
 
-import Core
+import Reanimate.EUTxO.Core
 
 transactions :: IO ()
 transactions = reanimate $ a0 `andThen` (a1 `seqA` a2 `seqA` a3 `seqA` a4 `seqA` a5 `seqA` a6)

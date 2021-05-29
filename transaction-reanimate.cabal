@@ -8,11 +8,12 @@ Copyright:           © 2021 Lars Bruenjes
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Core
-                     , AnimationM
-                     , Oracle
-                     , TokenSale
-                     , Transaction
+  exposed-modules:     Reanimate.EUTxO.Core
+                     , Reanimate.EUTxO.AnimationM
+                     , Reanimate.EUTxO.Examples.Monadic
+                     , Reanimate.EUTxO.Examples.Oracle
+                     , Reanimate.EUTxO.Examples.TokenSale
+                     , Reanimate.EUTxO.Examples.Transaction
   build-depends:       base >=4.14 && <4.15
                      , containers
                      , linear
@@ -24,6 +25,14 @@ library
                      , text
   default-language:    Haskell2010
   ghc-options:         -Wall
+
+executable monadic
+  hs-source-dirs:      app
+  main-is:             monadic.hs
+  build-depends:       base >= 4.14 && <4.15
+                     , transaction-reanimate
+  ghc-options:         -Wall -O2
+  default-language:    Haskell2010
 
 executable oracle
   hs-source-dirs:      app

@@ -2,7 +2,7 @@ module Main
     ( main
     ) where
 
-import Transaction (transactions)
+import Reanimate.EUTxO.Examples.Transaction (transactions)
 
 main :: IO ()
 main = transactions

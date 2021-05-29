@@ -2,7 +2,7 @@ module Main
     ( main
     ) where
 
-import TokenSale (tokenSale)
+import Reanimate.EUTxO.Examples.TokenSale (tokenSale)
 
 main :: IO ()
 main = tokenSale

@@ -1,10 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module TokenSale
+module Reanimate.EUTxO.Examples.TokenSale
     ( tokenSale
     ) where
 
-import Core
+import Reanimate.EUTxO.Core
 
 tokenSale :: IO ()
 tokenSale = reanimate $ a0 `andThen` a1

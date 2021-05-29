@@ -8,3 +8,5 @@ cradle:
       component: "exe:oracle"
     - path: "app/tokensale.hs"
       component: "exe:tokensale"
+    - path: "app/monadic.hs"
+      component: "exe:monadic"

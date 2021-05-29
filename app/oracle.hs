@@ -2,7 +2,7 @@ module Main
     ( main
     ) where
 
-import Oracle (oracle)
+import Reanimate.EUTxO.Examples.Oracle (oracle)
 
 main :: IO ()
 main = oracle

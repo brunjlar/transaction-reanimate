@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Core
+module Reanimate.EUTxO.Core
     ( Text
     , module Reanimate
     , lastFrame

@@ -1,10 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Oracle
+module Reanimate.EUTxO.Examples.Oracle
     ( oracle
     ) where
 
-import Core
+import Reanimate.EUTxO.Core
 
 oracle :: IO ()
 oracle = reanimate $ a0 `andThen` (pause 1 `seqA` a1 `seqA` a2 `andThen` a3)
