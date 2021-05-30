@@ -9,7 +9,8 @@ Copyright:           © 2021 Lars Bruenjes
 library
   hs-source-dirs:      src
   exposed-modules:     Reanimate.EUTxO.Core
-                     , Reanimate.EUTxO.AnimationM
+                     , Reanimate.EUTxO.Monadic.Advanced
+                     , Reanimate.EUTxO.Monadic.Simple
                      , Reanimate.EUTxO.Examples.Monadic
                      , Reanimate.EUTxO.Examples.Oracle
                      , Reanimate.EUTxO.Examples.TokenSale

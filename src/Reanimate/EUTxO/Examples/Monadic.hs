@@ -8,9 +8,9 @@ module Reanimate.EUTxO.Examples.Monadic
     ( monadic
     ) where
 
-import Control.Monad              (void)
+import Control.Monad                  (void)
 
-import Reanimate.EUTxO.AnimationM
+import Reanimate.EUTxO.Monadic.Simple
 
 monadic :: IO ()
 monadic = reanimateM example

@@ -4,7 +4,7 @@
 
 {-# OPTIONS_GHC -Wno-unused-top-binds   #-}
 
-module Reanimate.EUTxO.AnimationM
+module Reanimate.EUTxO.Monadic.Simple
     ( MonadError (..)
     , Pos
     , Tx
