@@ -7,8 +7,8 @@
 module Reanimate.EUTxO.Monadic.Simple
     ( MonadError (..)
     , Pos
-    , Tx
-    , Output
+    , Tx (..)
+    , Output (..)
     , AnimationM
     , txM
     , outputM
@@ -96,7 +96,7 @@ checkOutput o@(Output oid) = do
         Just _  -> do
             s <- use sUTxOs
             if oid `IS.member` s
-                then return ()
+                then sUTxOs %= IS.delete oid
                 else throwError $ "output " ++ show o ++ " already consumed"
 
 checkTx :: (MonadState S m, MonadError String m) => Tx -> m ()
@@ -211,15 +211,3 @@ reanimateM m = do
     case runAnimationM m of
         Left err -> hPutStrLn stderr ("ERROR: " ++ err) >> exitWith (ExitFailure 1)
         Right x  -> reanimate x
-
-example :: AnimationM ()
-example = do
-    txGen   <- txM False (-10, 0)
-    oAlice1 <- outputM "Alice" Nothing "100 ada" txGen (-5, 0)
-    delayM
-    tx <- txM True (0, 0)
-    inputM Nothing oAlice1 tx
-    void $ outputM "Bob" Nothing "10 ada" tx (3, 2)
-    void $ outputM "Alice" Nothing "90 ada" tx (4, -1)
-    delayM
-

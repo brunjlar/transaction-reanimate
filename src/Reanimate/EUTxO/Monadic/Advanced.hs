@@ -1,225 +1,203 @@
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TemplateHaskell            #-}
-
-{-# OPTIONS_GHC -Wno-unused-top-binds   #-}
+{-# LANGUAGE DataKinds                #-}
+{-# LANGUAGE DeriveFunctor            #-}
+{-# LANGUAGE FlexibleContexts         #-}
+{-# LANGUAGE FlexibleInstances        #-}
+{-# LANGUAGE GADTs                    #-}
+{-# LANGUAGE PolyKinds                #-}
+{-# LANGUAGE StandaloneDeriving       #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
+{-# LANGUAGE TypeFamilies             #-}
+{-# LANGUAGE TypeOperators            #-}
+{-# LANGUAGE UndecidableInstances     #-}
 
 module Reanimate.EUTxO.Monadic.Advanced
-    ( MonadError (..)
-    , Pos
-    , Tx
+    ( module Prelude
+    , Nat (..)
+    , LT
+    , SNat (..)
+    , toInt
+    , KnownNat (..)
     , Output
+    , Tx (..)
+    , CheckTx
     , AnimationM
-    , txM
+    , return, (>>=), (>>)
     , outputM
+    , txM
     , inputM
     , delayM
     , runAnimationM
     , reanimateM
     ) where
 
-import           Control.Monad.Except     (MonadError (..))
-import           Control.Monad.RWS.Strict
-import           Data.Foldable            (toList)
-import           Data.IntMap.Strict       (IntMap)
-import qualified Data.IntMap.Strict       as IM
-import           Data.IntSet              (IntSet)
-import qualified Data.IntSet              as IS
-import           Data.List                (foldl')
-import           Data.Maybe               (fromMaybe)
-import           Data.Sequence            (Seq)
-import qualified Data.Sequence            as Seq
-import           Data.Text                (pack)
-import           Optics
-import           Optics.State.Operators
-import           Reanimate
-import           System.Exit              (ExitCode (..), exitWith)
-import           System.IO                (hPutStrLn, stderr)
+import           Control.Monad                  (void)
+import           Data.Kind                      (Constraint, Type)
+import           GHC.TypeLits                   (TypeError, ErrorMessage (..))
+import           Prelude                        hiding (return, (>>=), (>>))
+import qualified Prelude                        as P
+import           Reanimate                      (Animation, reanimate)
 
-import qualified Reanimate.EUTxO.Core     as C
+import           Reanimate.EUTxO.Monadic.Simple (Pos)
+import qualified Reanimate.EUTxO.Monadic.Simple as MS
 
-type Pos = (Double, Double)
-type PosMap = IntMap Pos
+data Nat = Z | S Nat
 
-data S = S
-    { _sNextIx  :: !Int
-    , _sNextTx  :: !Int
-    , _sOutputs :: !PosMap
-    , _sTxs     :: !PosMap
-    , _sUTxOs   :: !IntSet
-    } deriving (Show, Read, Eq, Ord)
+type family LT (m :: Nat) (n :: Nat) :: Constraint where
+    LT 'Z     ('S n) = ()
+    LT ('S m) ('S n) = LT m n
+    LT _      _      = TypeError ('Text "tx trying to consume newer output")
 
-newtype Tx = Tx {_getTx :: Int}
-    deriving (Show, Read, Eq, Ord)
+type SNat :: Nat -> Type
+data SNat n where
+    SZ :: SNat 'Z
+    SS :: SNat n -> SNat ('S n)
 
-newtype Output = Output {_getOutput :: Int}
-    deriving (Show, Read, Eq, Ord)
+toInt :: SNat n -> Int
+toInt SZ = 0
+toInt (SS n) = succ $ toInt n
 
-makeLenses ''S
-makeLenses ''Tx
-makeLenses ''Output
+class KnownNat (n :: Nat) where
+    theOne :: SNat n
 
-data Command =
-      OutputCmd String String String Int Int
-    | InputCmd String Int Int
-    | TxCmd (Maybe String) Int
-    | Delay
-    deriving (Show, Read, Eq, Ord)
+instance KnownNat 'Z where
+    theOne = SZ
 
-newtype AnimationM a = AnimationM (RWST () (Seq Command) S (Either String) a)
-    deriving (Functor, Applicative, Monad, MonadError String)
+instance KnownNat n => KnownNat ('S n) where
+    theOne = SS theOne
 
-runAnimationM' :: AnimationM () -> Either String ([Command], PosMap, PosMap)
-runAnimationM' (AnimationM m) = case runRWST m () s of
-    Left err           -> Left err
-    Right ((), s', xs) -> Right (toList xs, s' ^. sOutputs, s' ^. sTxs)
-  where
-    s = S
-        { _sNextIx  = 1
-        , _sNextTx  = 1
-        , _sOutputs = IM.empty
-        , _sTxs     = IM.empty
-        , _sUTxOs   = IS.empty
-        }
+type Tx :: Nat -> Type
+newtype Tx n = Tx (SNat n)
 
-nextIx :: MonadState S m => m Int
-nextIx = do
-    i <- use sNextIx
-    sNextIx %= succ
-    return i
+type Output :: Nat -> Type
+newtype Output n = Output (SNat n)
 
-checkOutput :: (MonadState S m, MonadError String m) => Output -> m ()
-checkOutput o@(Output oid) = do
-    m <- use $ sOutputs % at oid
-    case m of
-        Nothing -> throwError $ "undefined output " ++ show o
-        Just _  -> do
-            s <- use sUTxOs
-            if oid `IS.member` s
-                then return ()
-                else throwError $ "output " ++ show o ++ " already consumed"
+data State a = State a [a] [a]
 
-checkTx :: (MonadState S m, MonadError String m) => Tx -> m ()
-checkTx tx@(Tx txid) = do
-    m <- use $ sTxs % at txid
-    case m of
-        Nothing -> throwError $ "undefined transaction " ++ show tx
-        Just _  -> return ()
+type family NextIx (s :: State Nat) :: Nat where
+    NextIx ('State n _ _) = n
 
-txM :: Bool -> Pos -> AnimationM Tx
-txM named pos = AnimationM $ do
-    txId <- nextIx
-    ml   <- if named then do
-                l <- use sNextTx
-                sNextTx %= succ
-                return $ Just $ show l
-            else
-                return Nothing
-    sTxs % at txId .= Just pos
-    tell $ Seq.singleton $ TxCmd ml txId
-    return $ Tx txId
+type family NewOutput (s :: State Nat) :: State Nat where
+    NewOutput ('State n xs ys) = 'State ('S n) (n ': xs) ys
 
-outputM :: String -> Maybe String -> String -> Tx -> Pos -> AnimationM Output
-outputM address mdatum value tx@(Tx txId) pos = AnimationM $ do
-    checkTx tx
-    oid <- nextIx
-    sOutputs % at oid .= Just pos
-    sUTxOs            %= IS.insert oid
-    tell $ Seq.singleton $ OutputCmd address (fromMaybe "" mdatum) value txId oid
-    return $ Output oid
+type family NewTx (s :: State Nat) :: State Nat where
+    NewTx ('State n xs ys) = 'State ('S n) xs (n ': ys)
 
-inputM :: Maybe String -> Output -> Tx -> AnimationM ()
-inputM mredeemer o@(Output oid) tx@(Tx txid)
-    | oid >= txid = throwError $ "transaction " ++ show tx ++ " is too old to consume output " ++ show o
-    | otherwise   = AnimationM $ do
-        checkOutput o
-        checkTx tx
-        tell $ Seq.singleton $ InputCmd (fromMaybe "" mredeemer) oid txid
+type family Remove (xs :: [k]) (x :: k) :: [k] where
+    Remove (x ': xs) x = xs
+    Remove (y ': xs) x = (y ': Remove xs x)
 
-delayM :: AnimationM ()
-delayM = AnimationM $ tell $ Seq.singleton Delay
+type family UseOutput (s :: State Nat) (oid :: Nat) :: State Nat where
+    UseOutput ('State n xs ys) oid = 'State n (Remove xs oid) ys
 
-insOuts :: [Command] -> IntMap (Int, Int)
-insOuts = foldl' f IM.empty
-  where
-    f :: IntMap (Int, Int) -> Command -> IntMap (Int, Int)
-    f m (OutputCmd _ _ _ txid _) = m & ix txid % _2 %~ succ
-    f m (InputCmd _ _ txid)      = m & ix txid % _1 %~ succ
-    f m (TxCmd _ txid)           = m & at txid      ?~ (0, 0)
-    f m Delay                    = m
+type family Member (x :: k) (xs :: [k]) :: Constraint where
+    Member x (x ': xs) = ()
+    Member x (_ ': xs) = Member x xs
+    Member x '[]       = TypeError ('Text "unknown output or tx " ':<>: 'ShowType x)
 
-offset :: Int -> Int -> Double
-offset total i =
-  let
-    d = 2 / (2 * fromIntegral total)
-  in
-    1 - (2 * fromIntegral i + 1) * d
+type family CheckOutput (s :: State Nat) (oid :: Nat) :: Constraint where
+    CheckOutput ('State _ xs _) oid = Member oid xs
 
-type M a = RWS (PosMap, PosMap, IntMap (Int, Int)) () (IntMap (Int, Int)) a
+type family CheckTx (s :: State Nat) (txid :: Nat) :: Constraint where
+    CheckTx ('State _ _ xs) txid = Member txid xs
 
-getOffset :: Lens (Int, Int) (Int, Int) Int Int -> Int -> M Double
-getOffset l txid = do
-    x <- IM.findWithDefault (0, 0) txid <$> get
-    t <- view l . (IM.! txid) <$> asks (view _3)
-    at txid .= Just (x & l %~ succ)
-    return $ offset t $ x ^. l
+type AnimationM :: State Nat -> State Nat -> Type -> Type
+data AnimationM old new a where
 
-getOutputPos :: Int -> M Pos
-getOutputPos oid = (IM.! oid)  <$> asks (view _1)
+    Pure    :: a -> AnimationM s s a
 
-getTxPos :: Int -> M Pos
-getTxPos txid = (IM.! txid)  <$> asks (view _2)
+    OutputM :: ( CheckTx old txid
+               , KnownNat (NextIx old)
+               )
+            => String
+            -> Maybe String
+            -> String
+            -> Tx txid
+            -> Pos
+            -> (Output (NextIx old) -> AnimationM (NewOutput old) new a)
+            -> AnimationM old new a
 
-stepM :: Command -> M Animation
-stepM (OutputCmd address datum value txid oid) = do
-    oPos   <- getOutputPos oid
-    (x, y) <- getTxPos txid
-    dy     <- getOffset _2 txid
-    return $ C.output
-        (pack address)
-        (pack datum)
-        (pack value)
-        (x, y + dy)
-        oPos
-stepM (InputCmd redeemer oid txid) = do
-    oPos   <- getOutputPos oid
-    (x, y) <- getTxPos txid
-    dy     <- getOffset _1 txid
-    return $ C.input
-        (pack redeemer)
-        (x, y + dy)
-        oPos
-stepM (TxCmd mlabel txid) = do
-    txPos <- getTxPos txid
-    return $ C.txWithLabel mlabel txPos
-stepM Delay = return $ pause 1
+    TxM     :: KnownNat (NextIx old)
+            => Bool
+            -> Pos
+            -> (Tx (NextIx old) -> AnimationM (NewTx old) new a)
+            -> AnimationM old new a
 
-stepsM :: [Command] -> M Animation
-stepsM []           = return $ pause 0
-stepsM (cmd : cmds) = do
-    x <- stepM cmd
-    y <- stepsM cmds
-    return $ x `andThen` y
+    InputM  :: ( CheckOutput old oid
+               , CheckTx old txid
+               , LT oid txid
+               )
+            => Maybe String
+            -> Output oid
+            -> Tx txid
+            -> AnimationM (UseOutput old oid) new a
+            -> AnimationM old new a
 
-runAnimationM :: AnimationM () -> Either String Animation
-runAnimationM m = case runAnimationM' m of
-    Left err                -> Left err
-    Right (cmds, outs, txs) -> Right $ fst $ evalRWS (stepsM cmds) (outs, txs, insOuts cmds) IM.empty
+    DelayM  :: AnimationM old new a -> AnimationM old new a
 
-reanimateM :: AnimationM () -> IO ()
-reanimateM m = do
-    case runAnimationM m of
-        Left err -> hPutStrLn stderr ("ERROR: " ++ err) >> exitWith (ExitFailure 1)
-        Right x  -> reanimate x
+deriving instance Functor (AnimationM old new)
 
-example :: AnimationM ()
-example = do
-    txGen   <- txM False (-10, 0)
-    oAlice1 <- outputM "Alice" Nothing "100 ada" txGen (-5, 0)
-    delayM
-    tx <- txM True (0, 0)
-    inputM Nothing oAlice1 tx
-    void $ outputM "Bob" Nothing "10 ada" tx (3, 2)
-    void $ outputM "Alice" Nothing "90 ada" tx (4, -1)
-    delayM
+return :: a -> AnimationM s s a
+return = Pure
 
+(>>=) :: AnimationM old medium a -> (a -> AnimationM medium new b) -> AnimationM old new b
+Pure a                                   >>= f = f a
+OutputM address mdatum value tx pos cont >>= f = OutputM address mdatum value tx pos $ (>>= f) . cont
+TxM label pos cont                       >>= f = TxM label pos $ (>>= f) . cont
+InputM mredeemer output tx cont          >>= f = InputM mredeemer output tx $ cont >>= f
+DelayM cont                              >>= f = DelayM $ cont >>= f
+
+(>>) :: AnimationM old medium a -> AnimationM medium new b -> AnimationM old new b
+x >> y = x >>= const y
+
+outputM :: ( CheckTx s txid
+           , KnownNat (NextIx s)
+           )
+        => String
+        -> Maybe String
+        -> String
+        -> Tx txid
+        -> Pos
+        -> AnimationM s (NewOutput s) (Output (NextIx s))
+outputM address mdatum value tx pos = OutputM address mdatum value tx pos Pure
+
+txM :: KnownNat (NextIx s) => Bool -> Pos -> AnimationM s (NewTx s) (Tx (NextIx s))
+txM label pos = TxM label pos Pure
+
+inputM :: ( CheckOutput s oid
+          , CheckTx s txid
+          , LT oid txid
+          )
+        => Maybe String
+        -> Output oid
+        -> Tx txid
+        -> AnimationM s (UseOutput s oid) ()
+inputM mredeemer output tx = InputM mredeemer output tx $ Pure ()
+
+delayM :: AnimationM s s ()
+delayM = DelayM $ Pure ()
+
+runAnimationM' :: AnimationM old new a -> MS.AnimationM a
+runAnimationM' (Pure a) = P.return a
+runAnimationM' (OutputM address mdatum value (Tx n) pos cont) = do
+    let txid = toInt n
+    void $ MS.outputM address mdatum value (MS.Tx txid) pos
+    runAnimationM' $ cont $ Output theOne
+runAnimationM' (TxM label pos cont) = do
+    void $ MS.txM label pos
+    runAnimationM' $ cont $ Tx theOne
+runAnimationM' (InputM mredeemer (Output m) (Tx n) cont) = do
+    let oid  = toInt m
+        txid = toInt n
+    MS.inputM mredeemer (MS.Output oid) (MS.Tx txid)
+    runAnimationM' cont
+runAnimationM' (DelayM cont) = do
+    MS.delayM
+    runAnimationM' cont
+
+runAnimationM :: AnimationM ('State ('S 'Z) '[] '[]) s () -> Animation
+runAnimationM m = case MS.runAnimationM $ runAnimationM' m of
+    Left _   -> error "impossible case"
+    Right a  -> a
+
+reanimateM :: AnimationM ('State ('S 'Z) '[] '[]) s () -> IO ()
+reanimateM = reanimate . runAnimationM
