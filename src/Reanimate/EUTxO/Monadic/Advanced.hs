@@ -23,6 +23,7 @@ module Reanimate.EUTxO.Monadic.Advanced
     , AnimationM
     , return, (>>=), (>>)
     , outputM
+    , outputM'
     , txM
     , inputM
     , delayM
@@ -108,9 +109,10 @@ data AnimationM old new a where
     OutputM :: ( CheckTx old txid
                , KnownNat (NextIx old)
                )
-            => String
-            -> Maybe String
+            => Double
             -> String
+            -> String
+            -> Maybe String
             -> Tx txid
             -> Pos
             -> (Output (NextIx old) -> AnimationM (NewOutput old) new a)
@@ -140,25 +142,37 @@ return :: a -> AnimationM s s a
 return = Pure
 
 (>>=) :: AnimationM old medium a -> (a -> AnimationM medium new b) -> AnimationM old new b
-Pure a                                   >>= f = f a
-OutputM address mdatum value tx pos cont >>= f = OutputM address mdatum value tx pos $ (>>= f) . cont
-TxM label pos cont                       >>= f = TxM label pos $ (>>= f) . cont
-InputM mredeemer output tx cont          >>= f = InputM mredeemer output tx $ cont >>= f
-DelayM cont                              >>= f = DelayM $ cont >>= f
+Pure a                                      >>= f = f a
+OutputM d address amount mdatum tx pos cont >>= f = OutputM d address amount mdatum tx pos $ (>>= f) . cont
+TxM label pos cont                          >>= f = TxM label pos $ (>>= f) . cont
+InputM mredeemer output tx cont             >>= f = InputM mredeemer output tx $ cont >>= f
+DelayM cont                                 >>= f = DelayM $ cont >>= f
 
 (>>) :: AnimationM old medium a -> AnimationM medium new b -> AnimationM old new b
 x >> y = x >>= const y
+
+outputM' :: ( CheckTx s txid
+            , KnownNat (NextIx s)
+            )
+         => Double
+         -> String
+         -> String
+         -> Maybe String
+         -> Tx txid
+         -> Pos
+         -> AnimationM s (NewOutput s) (Output (NextIx s))
+outputM' d address amount mdatum tx pos = OutputM d address amount mdatum tx pos Pure
 
 outputM :: ( CheckTx s txid
            , KnownNat (NextIx s)
            )
         => String
-        -> Maybe String
         -> String
+        -> Maybe String
         -> Tx txid
         -> Pos
         -> AnimationM s (NewOutput s) (Output (NextIx s))
-outputM address mdatum value tx pos = OutputM address mdatum value tx pos Pure
+outputM = outputM' 1.35
 
 txM :: KnownNat (NextIx s) => Bool -> Pos -> AnimationM s (NewTx s) (Tx (NextIx s))
 txM label pos = TxM label pos Pure
@@ -178,9 +192,9 @@ delayM = DelayM $ Pure ()
 
 runAnimationM' :: AnimationM old new a -> MS.AnimationM a
 runAnimationM' (Pure a) = P.return a
-runAnimationM' (OutputM address mdatum value (Tx n) pos cont) = do
+runAnimationM' (OutputM d address amount mdatum (Tx n) pos cont) = do
     let txid = toInt n
-    void $ MS.outputM address mdatum value (MS.Tx txid) pos
+    void $ MS.outputM' d address amount mdatum (MS.Tx txid) pos
     runAnimationM' $ cont $ Output theOne
 runAnimationM' (TxM label pos cont) = do
     void $ MS.txM label pos

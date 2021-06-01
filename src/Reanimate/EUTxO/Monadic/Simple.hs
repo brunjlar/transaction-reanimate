@@ -12,6 +12,7 @@ module Reanimate.EUTxO.Monadic.Simple
     , AnimationM
     , txM
     , outputM
+    , outputM'
     , inputM
     , delayM
     , runAnimationM
@@ -60,7 +61,7 @@ makeLenses ''Tx
 makeLenses ''Output
 
 data Command =
-      OutputCmd String String String Int Int
+      OutputCmd Double String String String Int Int
     | InputCmd String Int Int
     | TxCmd (Maybe String) Int
     | Delay
@@ -119,13 +120,16 @@ txM named pos = AnimationM $ do
     tell $ Seq.singleton $ TxCmd ml txId
     return $ Tx txId
 
-outputM :: String -> Maybe String -> String -> Tx -> Pos -> AnimationM Output
-outputM address mdatum value tx@(Tx txId) pos = AnimationM $ do
+outputM :: String -> String -> Maybe String -> Tx -> Pos -> AnimationM Output
+outputM = outputM' 1.35
+
+outputM' :: Double -> String -> String -> Maybe String -> Tx -> Pos -> AnimationM Output
+outputM' d address amount mdatum tx@(Tx txId) pos = AnimationM $ do
     checkTx tx
     oid <- nextIx
     sOutputs % at oid .= Just pos
     sUTxOs            %= IS.insert oid
-    tell $ Seq.singleton $ OutputCmd address (fromMaybe "" mdatum) value txId oid
+    tell $ Seq.singleton $ OutputCmd d address amount (fromMaybe "" mdatum) txId oid
     return $ Output oid
 
 inputM :: Maybe String -> Output -> Tx -> AnimationM ()
@@ -143,10 +147,10 @@ insOuts :: [Command] -> IntMap (Int, Int)
 insOuts = foldl' f IM.empty
   where
     f :: IntMap (Int, Int) -> Command -> IntMap (Int, Int)
-    f m (OutputCmd _ _ _ txid _) = m & ix txid % _2 %~ succ
-    f m (InputCmd _ _ txid)      = m & ix txid % _1 %~ succ
-    f m (TxCmd _ txid)           = m & at txid      ?~ (0, 0)
-    f m Delay                    = m
+    f m (OutputCmd _ _ _ _ txid _) = m & ix txid % _2 %~ succ
+    f m (InputCmd _ _ txid)        = m & ix txid % _1 %~ succ
+    f m (TxCmd _ txid)             = m & at txid      ?~ (0, 0)
+    f m Delay                      = m
 
 offset :: Int -> Int -> Double
 offset total i =
@@ -171,14 +175,15 @@ getTxPos :: Int -> M Pos
 getTxPos txid = (IM.! txid)  <$> asks (view _2)
 
 stepM :: Command -> M Animation
-stepM (OutputCmd address datum value txid oid) = do
+stepM (OutputCmd d address amount datum txid oid) = do
     oPos   <- getOutputPos oid
     (x, y) <- getTxPos txid
     dy     <- getOffset _2 txid
-    return $ C.output
+    return $ C.output'
+        d
         (pack address)
+        (pack amount)
         (pack datum)
-        (pack value)
         (x, y + dy)
         oPos
 stepM (InputCmd redeemer oid txid) = do
