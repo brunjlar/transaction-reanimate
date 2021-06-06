@@ -1,15 +1,15 @@
 {-# LANGUAGE RebindableSyntax           #-}
 
-module Reanimate.EUTxO.Examples.Monadic
-    ( monadic
+module Reanimate.EUTxO.Examples.Uniswap
+    ( uniswap
     ) where
 
 import Control.Monad                    (void)
 
 import Reanimate.EUTxO.Monadic.Advanced
 
-monadic :: IO ()
-monadic = reanimateM $ do
+uniswap :: IO ()
+uniswap = reanimateM $ do
     txGen   <- txM False (-10, 0)
     oAlice1 <- outputM "Alice" "100 ada" Nothing txGen (-5, 0)
     delayM
