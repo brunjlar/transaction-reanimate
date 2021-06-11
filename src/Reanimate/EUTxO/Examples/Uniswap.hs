@@ -58,13 +58,3 @@ background = staticFrame 0 $ mkGroup
     [ mkImage 16 9 "stock-exchange.jpg"
     , withFillOpacity 0.8 $ mkBackground "white"
     ]
-{-
-    txGen   <- txM False (-10, 0)
-    oAlice1 <- outputM "Alice" "100 ada" Nothing txGen (-5, 0)
-    delayM
-    tx <- txM True (0, 0)
-    inputM Nothing oAlice1 tx
-    void $ outputM "Bob" "10 ada" Nothing tx (3, 2)
-    void $ outputM "Alice" "90 ada" Nothing tx (4, -1)
-    delayM
--}
