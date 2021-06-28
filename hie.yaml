@@ -12,3 +12,5 @@ cradle:
       component: "exe:monadic"
     - path: "app/uniswap.hs"
       component: "exe:uniswap"
+    - path: "app/auction.hs"
+      component: "exe:auction"
